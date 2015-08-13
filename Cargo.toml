@@ -1,0 +1,13 @@
+[package]
+name = "lampasas"
+version = "0.1.0"
+authors = ["Michael Fairley <michaelfairley@gmail.com>"]
+
+[dependencies]
+sdl2 = "*"
+
+[dependencies.gl]
+git = "https://github.com/bjz/gl-rs"
+
+[profile.dev]
+debug = true
