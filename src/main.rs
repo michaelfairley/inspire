@@ -1,12 +1,15 @@
 extern crate sdl2;
 extern crate gl;
 extern crate cgmath;
+extern crate rand;
 
 use gl::types::*;
 use std::mem;
 use std::ffi::CString;
 use std::ptr;
 use cgmath::FixedArray;
+use cgmath::Rotation3;
+use cgmath::EuclideanVector;
 
 pub mod graphics;
 
@@ -34,9 +37,11 @@ fn main() {
   let trans = cgmath::vec3(1.5 as GLfloat, 3.0, -5.0);
   let model = cgmath::Matrix4::from_translation(&trans);
 
-  let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 1.0, 1.0, 45.0);
+  let rotation  = rand::random::<cgmath::Vector3<GLfloat>>().normalize();
 
-  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -5.0);
+  let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 1024.0/768.0, 1.0, 45.0);
+
+  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -3.0);
 
   let ambient_strength: GLfloat = 0.5;
 
@@ -182,11 +187,17 @@ fn main() {
       }
     }
 
+    let time = sdl_context.timer().unwrap().get_ticks() as f32 / 1000.0;
+
     unsafe {
       gl::ClearColor(0.0, 0.0, 0.0, 1.0);
       gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
       gl::UseProgram(program);
+
+      let rotation_uniform = gl::GetUniformLocation(program, CString::new("rotation").unwrap().as_ptr());
+      let current_rotation: cgmath::Quaternion<GLfloat> = cgmath::Quaternion::from_axis_angle(&rotation, cgmath::rad(time)).normalize();
+      gl::UniformMatrix4fv(rotation_uniform, 1, gl::FALSE, mem::transmute(cgmath::Matrix4::from(current_rotation).as_fixed()));
 
       gl::BindVertexArray(vao);
       gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);

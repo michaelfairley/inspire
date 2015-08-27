@@ -6,6 +6,7 @@ authors = ["Michael Fairley <michaelfairley@gmail.com>"]
 [dependencies]
 sdl2 = "*"
 cgmath = "*"
+rand = "*"
 
 [dependencies.gl]
 git = "https://github.com/bjz/gl-rs"
