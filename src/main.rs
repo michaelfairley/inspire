@@ -6,12 +6,16 @@ extern crate rand;
 use gl::types::*;
 use std::mem;
 use std::ffi::CString;
+use std::f32::consts::PI;
 use std::ptr;
 use cgmath::FixedArray;
 use cgmath::Rotation3;
 use cgmath::EuclideanVector;
 
 pub mod graphics;
+
+const SECONDS_PER_REVOLUTION: f32 = 10.0;
+const RADIUS: f32 = 4.0;
 
 fn main() {
   let sdl_context = sdl2::init().unwrap();
@@ -34,14 +38,11 @@ fn main() {
 
   gl::load_with(|s| video.gl_get_proc_address(s));
 
-  let trans = cgmath::vec3(1.5 as GLfloat, 3.0, -5.0);
-  let model = cgmath::Matrix4::from_translation(&trans);
-
   let rotation  = rand::random::<cgmath::Vector3<GLfloat>>().normalize();
 
   let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 1024.0/768.0, 1.0, 45.0);
 
-  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -3.0);
+  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -5.0);
 
   let ambient_strength: GLfloat = 0.5;
 
@@ -51,9 +52,6 @@ fn main() {
 
   unsafe {
     gl::UseProgram(program);
-
-    let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
-    gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
 
     let proj_uniform = gl::GetUniformLocation(program, CString::new("proj").unwrap().as_ptr());
     gl::UniformMatrix4fv(proj_uniform, 1, gl::FALSE, mem::transmute(proj.as_fixed()));
@@ -198,6 +196,14 @@ fn main() {
       let rotation_uniform = gl::GetUniformLocation(program, CString::new("rotation").unwrap().as_ptr());
       let current_rotation: cgmath::Quaternion<GLfloat> = cgmath::Quaternion::from_axis_angle(&rotation, cgmath::rad(time)).normalize();
       gl::UniformMatrix4fv(rotation_uniform, 1, gl::FALSE, mem::transmute(cgmath::Matrix4::from(current_rotation).as_fixed()));
+
+      let (x, y) = ((time / SECONDS_PER_REVOLUTION) * PI * 2.0).sin_cos();
+
+      let trans = cgmath::vec3(x * RADIUS, y * RADIUS, -5.0);
+      let model = cgmath::Matrix4::from_translation(&trans);
+
+      let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
+      gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
 
       gl::BindVertexArray(vao);
       gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
