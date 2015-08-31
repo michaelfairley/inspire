@@ -13,6 +13,7 @@ use cgmath::Rotation3;
 use cgmath::EuclideanVector;
 
 pub mod graphics;
+pub mod cube;
 
 const SECONDS_PER_REVOLUTION: f32 = 10.0;
 const RADIUS: f32 = 4.0;
@@ -37,8 +38,6 @@ fn main() {
   let _context = window.gl_create_context().unwrap();
 
   gl::load_with(|s| video.gl_get_proc_address(s));
-
-  let rotation  = rand::random::<cgmath::Vector3<GLfloat>>().normalize();
 
   let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 1024.0/768.0, 1.0, 45.0);
 
@@ -65,55 +64,67 @@ fn main() {
     gl::UseProgram(0);
   }
 
-  let stride = 9;
+  let cubes = [
+    cube::Cube {
+      angle: 0.0,
+      rotation: rand::random::<cgmath::Vector3<GLfloat>>().normalize(),
+      color: [1.0, 0.0, 0.0],
+    },
+    cube::Cube {
+      angle: PI,
+      rotation: rand::random::<cgmath::Vector3<GLfloat>>().normalize(),
+      color: [0.0, 1.0, 0.0],
+    }];
+
+  let stride = 6;
   let verts: &[GLfloat] = &[
     // Front
-     1.0,  1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  0.0,  1.0,
-     1.0, -1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  0.0,  1.0,
-    -1.0,  1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  0.0,  1.0,
-    -1.0,  1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  0.0,  1.0,
-     1.0, -1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  0.0,  1.0,
-    -1.0, -1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  0.0,  1.0,
+     1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
+     1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
+    -1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
+    -1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
+     1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
+    -1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
 
     // Back
-     1.0,  1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  0.0, -1.0,
-    -1.0,  1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  0.0, -1.0,
-     1.0, -1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  0.0, -1.0,
-     1.0, -1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  0.0, -1.0,
-    -1.0,  1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  0.0, -1.0,
-    -1.0, -1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  0.0, -1.0,
+     1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
+    -1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
+     1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
+     1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
+    -1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
+    -1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
 
     // Left
-    -1.0,  1.0,  1.0, 1.0, 0.0, 0.0, -1.0,  0.0,  0.0,
-    -1.0, -1.0,  1.0, 1.0, 0.0, 0.0, -1.0,  0.0,  0.0,
-    -1.0,  1.0, -1.0, 1.0, 0.0, 0.0, -1.0,  0.0,  0.0,
-    -1.0,  1.0, -1.0, 1.0, 0.0, 0.0, -1.0,  0.0,  0.0,
-    -1.0, -1.0,  1.0, 1.0, 0.0, 0.0, -1.0,  0.0,  0.0,
-    -1.0, -1.0, -1.0, 1.0, 0.0, 0.0, -1.0,  0.0,  0.0,
+    -1.0,  1.0,  1.0, -1.0,  0.0,  0.0,
+    -1.0, -1.0,  1.0, -1.0,  0.0,  0.0,
+    -1.0,  1.0, -1.0, -1.0,  0.0,  0.0,
+    -1.0,  1.0, -1.0, -1.0,  0.0,  0.0,
+    -1.0, -1.0,  1.0, -1.0,  0.0,  0.0,
+    -1.0, -1.0, -1.0, -1.0,  0.0,  0.0,
 
     // Right
-     1.0,  1.0,  1.0, 1.0, 0.0, 0.0,  1.0,  0.0,  0.0,
-     1.0,  1.0, -1.0, 1.0, 0.0, 0.0,  1.0,  0.0,  0.0,
-     1.0, -1.0,  1.0, 1.0, 0.0, 0.0,  1.0,  0.0,  0.0,
-     1.0, -1.0,  1.0, 1.0, 0.0, 0.0,  1.0,  0.0,  0.0,
-     1.0,  1.0, -1.0, 1.0, 0.0, 0.0,  1.0,  0.0,  0.0,
-     1.0, -1.0, -1.0, 1.0, 0.0, 0.0,  1.0,  0.0,  0.0,
+     1.0,  1.0,  1.0,  1.0,  0.0,  0.0,
+     1.0,  1.0, -1.0,  1.0,  0.0,  0.0,
+     1.0, -1.0,  1.0,  1.0,  0.0,  0.0,
+     1.0, -1.0,  1.0,  1.0,  0.0,  0.0,
+     1.0,  1.0, -1.0,  1.0,  0.0,  0.0,
+     1.0, -1.0, -1.0,  1.0,  0.0,  0.0,
 
     // Bottom
-     1.0, -1.0,  1.0, 1.0, 0.0, 0.0,  0.0, -1.0,  0.0,
-     1.0, -1.0, -1.0, 1.0, 0.0, 0.0,  0.0, -1.0,  0.0,
-    -1.0, -1.0,  1.0, 1.0, 0.0, 0.0,  0.0, -1.0,  0.0,
-    -1.0, -1.0,  1.0, 1.0, 0.0, 0.0,  0.0, -1.0,  0.0,
-     1.0, -1.0, -1.0, 1.0, 0.0, 0.0,  0.0, -1.0,  0.0,
-    -1.0, -1.0, -1.0, 1.0, 0.0, 0.0,  0.0, -1.0,  0.0,
+     1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
+     1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
+    -1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
+    -1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
+     1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
+    -1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
 
     // Top
-     1.0,  1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  1.0,  0.0,
-    -1.0,  1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  1.0,  0.0,
-     1.0,  1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  1.0,  0.0,
-     1.0,  1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  1.0,  0.0,
-    -1.0,  1.0,  1.0, 1.0, 0.0, 0.0,  0.0,  1.0,  0.0,
-    -1.0,  1.0, -1.0, 1.0, 0.0, 0.0,  0.0,  1.0,  0.0,
+     1.0,  1.0,  1.0,  0.0,  1.0,  0.0,
+    -1.0,  1.0,  1.0,  0.0,  1.0,  0.0,
+     1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
+     1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
+    -1.0,  1.0,  1.0,  0.0,  1.0,  0.0,
+    -1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
   ];
 
   let mut vertex_buffer = 0;
@@ -143,15 +154,10 @@ fn main() {
     gl::EnableVertexAttribArray(pos_attr);
     gl::VertexAttribPointer(pos_attr, 3, gl::FLOAT, gl::FALSE, stride * mem::size_of::<GLfloat>() as GLsizei, ptr::null());
 
-    let color_attr = gl::GetAttribLocation(program,
-                                           CString::new("color").unwrap().as_ptr()) as GLuint;
-    gl::EnableVertexAttribArray(color_attr);
-    gl::VertexAttribPointer(color_attr, 3, gl::FLOAT, gl::FALSE, stride * mem::size_of::<GLfloat>() as GLsizei, mem::transmute(3 * mem::size_of::<GLfloat>()));
-
     let normal_attr = gl::GetAttribLocation(program,
                                            CString::new("normal").unwrap().as_ptr()) as GLuint;
     gl::EnableVertexAttribArray(normal_attr);
-    gl::VertexAttribPointer(normal_attr, 3, gl::FLOAT, gl::FALSE, stride * mem::size_of::<GLfloat>() as GLsizei, mem::transmute(6 * mem::size_of::<GLfloat>()));
+    gl::VertexAttribPointer(normal_attr, 3, gl::FLOAT, gl::FALSE, stride * mem::size_of::<GLfloat>() as GLsizei, mem::transmute(3 * mem::size_of::<GLfloat>()));
 
     gl::BindVertexArray(0);
   }
@@ -192,21 +198,29 @@ fn main() {
       gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
       gl::UseProgram(program);
-
-      let rotation_uniform = gl::GetUniformLocation(program, CString::new("rotation").unwrap().as_ptr());
-      let current_rotation: cgmath::Quaternion<GLfloat> = cgmath::Quaternion::from_axis_angle(&rotation, cgmath::rad(time)).normalize();
-      gl::UniformMatrix4fv(rotation_uniform, 1, gl::FALSE, mem::transmute(cgmath::Matrix4::from(current_rotation).as_fixed()));
-
-      let (x, y) = ((time / SECONDS_PER_REVOLUTION) * PI * 2.0).sin_cos();
-
-      let trans = cgmath::vec3(x * RADIUS, y * RADIUS, -5.0);
-      let model = cgmath::Matrix4::from_translation(&trans);
-
-      let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
-      gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
-
       gl::BindVertexArray(vao);
-      gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
+
+      for cube in &cubes {
+
+        let rotation_uniform = gl::GetUniformLocation(program, CString::new("rotation").unwrap().as_ptr());
+        let current_rotation: cgmath::Quaternion<GLfloat> = cgmath::Quaternion::from_axis_angle(&cube.rotation, cgmath::rad(time)).normalize();
+        gl::UniformMatrix4fv(rotation_uniform, 1, gl::FALSE, mem::transmute(cgmath::Matrix4::from(current_rotation).as_fixed()));
+
+        let (x, y) = ((time / SECONDS_PER_REVOLUTION) * PI * 2.0 + cube.angle).sin_cos();
+
+        let trans = cgmath::vec3(x * RADIUS, y * RADIUS, -6.0);
+        let model = cgmath::Matrix4::from_translation(&trans);
+
+        let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
+        gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
+
+        let color_uniform = gl::GetUniformLocation(program, CString::new("color").unwrap().as_ptr());
+        gl::Uniform3fv(color_uniform, 1, mem::transmute(&cube.color));
+
+
+        gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
+      }
+
       gl::BindVertexArray(0);
 
       gl::UseProgram(0);
