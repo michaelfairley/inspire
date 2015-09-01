@@ -16,7 +16,15 @@ pub mod graphics;
 pub mod cube;
 
 const SECONDS_PER_REVOLUTION: f32 = 10.0;
-const RADIUS: f32 = 4.0;
+const RADIUS: f32 = 6.0;
+
+const NUM_CUBES: i32 = 20;
+
+const COLORS: [[f32; 3]; 3] = [
+  [1.0, 0.0, 0.0],
+  [1.0, 1.0, 0.0],
+  [0.0, 1.0, 1.0],
+  ];
 
 fn main() {
   let sdl_context = sdl2::init().unwrap();
@@ -41,7 +49,7 @@ fn main() {
 
   let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 1024.0/768.0, 1.0, 45.0);
 
-  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -5.0);
+  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -9.0);
 
   let ambient_strength: GLfloat = 0.5;
 
@@ -64,17 +72,14 @@ fn main() {
     gl::UseProgram(0);
   }
 
-  let cubes = [
+  let cubes: Vec<cube::Cube> = (0..NUM_CUBES).map(
+    |i|
     cube::Cube {
-      angle: 0.0,
+      angle: i as f32 / NUM_CUBES as f32 * 2.0 * PI,
       rotation: rand::random::<cgmath::Vector3<GLfloat>>().normalize(),
-      color: [1.0, 0.0, 0.0],
-    },
-    cube::Cube {
-      angle: PI,
-      rotation: rand::random::<cgmath::Vector3<GLfloat>>().normalize(),
-      color: [0.0, 1.0, 0.0],
-    }];
+      color: COLORS[i as usize % COLORS.len()],
+    }
+    ).collect();
 
   let stride = 6;
   let verts: &[GLfloat] = &[
@@ -208,7 +213,7 @@ fn main() {
 
         let (x, y) = ((time / SECONDS_PER_REVOLUTION) * PI * 2.0 + cube.angle).sin_cos();
 
-        let trans = cgmath::vec3(x * RADIUS, y * RADIUS, -6.0);
+        let trans = cgmath::vec3(x * RADIUS, y * RADIUS, -10.0);
         let model = cgmath::Matrix4::from_translation(&trans);
 
         let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
