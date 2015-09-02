@@ -51,7 +51,7 @@ fn main() {
 
   let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 1024.0/768.0, 1.0, 45.0);
 
-  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -9.5);
+  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -10.0);
 
   let ambient_strength: GLfloat = 0.5;
 
