@@ -18,12 +18,14 @@ pub mod cube;
 const SECONDS_PER_REVOLUTION: f32 = 10.0;
 const RADIUS: f32 = 6.0;
 
-const NUM_CUBES: i32 = 20;
+const NUM_CUBES: i32 = 40;
 
-const COLORS: [[f32; 3]; 3] = [
-  [1.0, 0.0, 0.0],
-  [1.0, 1.0, 0.0],
-  [0.0, 1.0, 1.0],
+const COLORS: [[f32; 3]; 5] = [
+  [0.25, 0.8, 1.0], // Blue
+  [1.0, 0.2, 0.5], // Magenta
+  [1.0, 1.0, 0.5], // Yellow
+  [0.4, 0.4, 0.4], // Black
+  [1.0, 1.0, 1.0], // White
   ];
 
 fn main() {
@@ -49,7 +51,7 @@ fn main() {
 
   let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 1024.0/768.0, 1.0, 45.0);
 
-  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -9.0);
+  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -9.5);
 
   let ambient_strength: GLfloat = 0.5;
 
@@ -199,7 +201,7 @@ fn main() {
     let time = sdl_context.timer().unwrap().get_ticks() as f32 / 1000.0;
 
     unsafe {
-      gl::ClearColor(0.0, 0.0, 0.0, 1.0);
+      gl::ClearColor(0.96, 0.96, 0.96, 1.0);
       gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
       gl::UseProgram(program);
