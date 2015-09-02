@@ -80,6 +80,7 @@ fn main() {
       angle: i as f32 / NUM_CUBES as f32 * 2.0 * PI,
       rotation: rand::random::<cgmath::Vector3<GLfloat>>().normalize(),
       color: COLORS[i as usize % COLORS.len()],
+      initial_rotation: rand::random(),
     }
     ).collect();
 
@@ -210,7 +211,7 @@ fn main() {
       for cube in &cubes {
 
         let rotation_uniform = gl::GetUniformLocation(program, CString::new("rotation").unwrap().as_ptr());
-        let current_rotation: cgmath::Quaternion<GLfloat> = cgmath::Quaternion::from_axis_angle(&cube.rotation, cgmath::rad(time)).normalize();
+        let current_rotation: cgmath::Quaternion<GLfloat> = cgmath::Quaternion::from_axis_angle(&cube.rotation, cgmath::rad(time + cube.initial_rotation)).normalize();
         gl::UniformMatrix4fv(rotation_uniform, 1, gl::FALSE, mem::transmute(cgmath::Matrix4::from(current_rotation).as_fixed()));
 
         let (x, y) = ((time / SECONDS_PER_REVOLUTION) * PI * 2.0 + cube.angle).sin_cos();
