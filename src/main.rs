@@ -16,9 +16,12 @@ pub mod graphics;
 pub mod cube;
 
 const SECONDS_PER_REVOLUTION: f32 = 10.0;
-const RADIUS: f32 = 6.0;
+const RADIUS: f32 = 7.0;
+const DEPTH: f32 = 13.0;
+const HEIGHT: f32 = 1.5;
 
 const NUM_CUBES: i32 = 40;
+
 
 const COLORS: [[f32; 3]; 5] = [
   [0.25, 0.8, 1.0], // Blue
@@ -39,7 +42,7 @@ fn main() {
   gl_attr.set_context_flags().debug().set();
 
   let window = video
-    .window("Inspire", 1024, 768)
+    .window("Inspire", 768/2, 1024/2)
     .position_centered()
     .opengl()
     .build()
@@ -49,9 +52,7 @@ fn main() {
 
   gl::load_with(|s| video.gl_get_proc_address(s));
 
-  let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 1024.0/768.0, 1.0, 45.0);
-
-  let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, 0.0, -10.0);
+  let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 768.0/1024.0, 1.0, 45.0);
 
   let ambient_strength: GLfloat = 0.5;
 
@@ -64,9 +65,6 @@ fn main() {
 
     let proj_uniform = gl::GetUniformLocation(program, CString::new("proj").unwrap().as_ptr());
     gl::UniformMatrix4fv(proj_uniform, 1, gl::FALSE, mem::transmute(proj.as_fixed()));
-
-    let light_pos_uniform = gl::GetUniformLocation(program, CString::new("light_pos").unwrap().as_ptr());
-    gl::Uniform3fv(light_pos_uniform, 1, mem::transmute(light_pos.as_fixed()));
 
     let ambient_strength_uniform = gl::GetUniformLocation(program, CString::new("ambient_strength").unwrap().as_ptr());
     gl::Uniform1f(ambient_strength_uniform, ambient_strength);
@@ -177,10 +175,10 @@ fn main() {
     gl::DepthRange(0.0, 1.0);
 
     gl::Enable(gl::CULL_FACE);
-    gl::CullFace(gl::BACK);
     gl::FrontFace(gl::CW);
   }
 
+  let mut drawing = true;
   let mut running = true;
 
   while running {
@@ -194,7 +192,9 @@ fn main() {
         => running = false,
         Event::KeyDown { keycode: Some(Keycode::R), ..}
         => {
-        }
+        },
+        Event::KeyDown { keycode: Some(Keycode::P), ..}
+        => drawing = !drawing,
         _ => {}
       }
     }
@@ -215,8 +215,14 @@ fn main() {
         gl::UniformMatrix4fv(rotation_uniform, 1, gl::FALSE, mem::transmute(cgmath::Matrix4::from(current_rotation).as_fixed()));
 
         let (x, y) = ((time / SECONDS_PER_REVOLUTION) * PI * 2.0 + cube.angle).sin_cos();
+        // Normal
+        gl::CullFace(gl::BACK);
 
-        let trans = cgmath::vec3(x * RADIUS, y * RADIUS, -10.0);
+        let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, HEIGHT, -DEPTH);
+        let light_pos_uniform = gl::GetUniformLocation(program, CString::new("light_pos").unwrap().as_ptr());
+        gl::Uniform3fv(light_pos_uniform, 1, mem::transmute(light_pos.as_fixed()));
+
+        let trans = cgmath::vec3(x * RADIUS, HEIGHT + y * RADIUS, -DEPTH);
         let model = cgmath::Matrix4::from_translation(&trans);
 
         let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
@@ -225,6 +231,19 @@ fn main() {
         let color_uniform = gl::GetUniformLocation(program, CString::new("color").unwrap().as_ptr());
         gl::Uniform3fv(color_uniform, 1, mem::transmute(&cube.color));
 
+        gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
+
+        // Reflection
+        gl::CullFace(gl::FRONT);
+        let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, HEIGHT - (2.7 * RADIUS), -DEPTH);
+        let light_pos_uniform = gl::GetUniformLocation(program, CString::new("light_pos").unwrap().as_ptr());
+        gl::Uniform3fv(light_pos_uniform, 1, mem::transmute(light_pos.as_fixed()));
+
+        let trans = cgmath::vec3(x * RADIUS, HEIGHT + (-2.7 - y) * RADIUS, -DEPTH);
+        let flip = cgmath::Matrix4::from(cgmath::Matrix3::from_diagonal(&cgmath::vec3(1.0, - 1.0, 1.0)));
+        let model = cgmath::Matrix4::from_translation(&trans) * flip;
+        let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
+        gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
 
         gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
       }
@@ -233,7 +252,9 @@ fn main() {
 
       gl::UseProgram(0);
 
-      window.gl_swap_window();
+      if drawing {
+        window.gl_swap_window();
+      }
     }
   }
 }
