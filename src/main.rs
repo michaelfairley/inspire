@@ -208,9 +208,14 @@ fn main() {
       gl::UseProgram(program);
       gl::BindVertexArray(vao);
 
+      let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
+      let light_pos_uniform = gl::GetUniformLocation(program, CString::new("light_pos").unwrap().as_ptr());
+      let color_uniform = gl::GetUniformLocation(program, CString::new("color").unwrap().as_ptr());
+      let rotation_uniform = gl::GetUniformLocation(program, CString::new("rotation").unwrap().as_ptr());
+      let alpha_uniform = gl::GetUniformLocation(program, CString::new("alpha").unwrap().as_ptr());
+
       for cube in &cubes {
 
-        let rotation_uniform = gl::GetUniformLocation(program, CString::new("rotation").unwrap().as_ptr());
         let current_rotation: cgmath::Quaternion<GLfloat> = cgmath::Quaternion::from_axis_angle(&cube.rotation, cgmath::rad(time + cube.initial_rotation)).normalize();
         gl::UniformMatrix4fv(rotation_uniform, 1, gl::FALSE, mem::transmute(cgmath::Matrix4::from(current_rotation).as_fixed()));
 
@@ -219,16 +224,14 @@ fn main() {
         gl::CullFace(gl::BACK);
 
         let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, HEIGHT, -DEPTH);
-        let light_pos_uniform = gl::GetUniformLocation(program, CString::new("light_pos").unwrap().as_ptr());
         gl::Uniform3fv(light_pos_uniform, 1, mem::transmute(light_pos.as_fixed()));
 
         let trans = cgmath::vec3(x * RADIUS, HEIGHT + y * RADIUS, -DEPTH);
         let model = cgmath::Matrix4::from_translation(&trans);
 
-        let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
         gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
 
-        let color_uniform = gl::GetUniformLocation(program, CString::new("color").unwrap().as_ptr());
+        gl::Uniform1f(alpha_uniform, 1.0);
         gl::Uniform3fv(color_uniform, 1, mem::transmute(&cube.color));
 
         gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
@@ -236,14 +239,13 @@ fn main() {
         // Reflection
         gl::CullFace(gl::FRONT);
         let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, HEIGHT - (2.7 * RADIUS), -DEPTH);
-        let light_pos_uniform = gl::GetUniformLocation(program, CString::new("light_pos").unwrap().as_ptr());
         gl::Uniform3fv(light_pos_uniform, 1, mem::transmute(light_pos.as_fixed()));
 
         let trans = cgmath::vec3(x * RADIUS, HEIGHT + (-2.7 - y) * RADIUS, -DEPTH);
         let flip = cgmath::Matrix4::from(cgmath::Matrix3::from_diagonal(&cgmath::vec3(1.0, - 1.0, 1.0)));
         let model = cgmath::Matrix4::from_translation(&trans) * flip;
-        let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
         gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
+        gl::Uniform1f(alpha_uniform, 0.3);
 
         gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
       }

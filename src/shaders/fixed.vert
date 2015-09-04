@@ -10,6 +10,7 @@ uniform mat4 model;
 uniform mat4 rotation;
 
 uniform vec3 color;
+uniform float alpha;
 
 uniform vec3 light_pos;
 uniform float ambient_strength;
@@ -23,5 +24,5 @@ void main() {
 
   float angle_of_incidence = clamp(dot(camera_normal, dir_to_light), 0, 1);
 
-  _color = (color * (1.0 - ambient_strength) * angle_of_incidence) + (color * ambient_strength);
+  _color = mix(vec3(1.0), (color * (1.0 - ambient_strength) * angle_of_incidence) + (color * ambient_strength), alpha);
 }
