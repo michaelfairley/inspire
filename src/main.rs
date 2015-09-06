@@ -1,18 +1,14 @@
 extern crate sdl2;
-extern crate gl;
 extern crate cgmath;
 extern crate rand;
+#[macro_use]
+extern crate glium;
+extern crate glium_sdl2;
 
-use gl::types::*;
-use std::mem;
-use std::ffi::CString;
 use std::f32::consts::PI;
-use std::ptr;
-use cgmath::FixedArray;
 use cgmath::Rotation3;
 use cgmath::EuclideanVector;
 
-pub mod graphics;
 pub mod cube;
 
 const SECONDS_PER_REVOLUTION: f32 = 10.0;
@@ -32,6 +28,9 @@ const COLORS: [[f32; 3]; 5] = [
   ];
 
 fn main() {
+  use glium_sdl2::DisplayBuild;
+  use glium::Surface;
+
   let sdl_context = sdl2::init().unwrap();
 
   let video = sdl_context.video().unwrap();
@@ -43,140 +42,104 @@ fn main() {
 
   let window = video
     .window("Inspire", 768/2, 1024/2)
-    .position_centered()
-    .opengl()
-    .build()
+    .resizable()
+    // .position_centered()
+    // .opengl()
+    .build_glium()
     .unwrap();
 
-  let _context = window.gl_create_context().unwrap();
+  let proj = cgmath::perspective(cgmath::deg(90 as f32), 768.0/1024.0, 1.0, 45.0);
 
-  gl::load_with(|s| video.gl_get_proc_address(s));
+  let ambient_strength: f32 = 0.5;
 
-  let proj = cgmath::perspective(cgmath::deg(90 as GLfloat), 768.0/1024.0, 1.0, 45.0);
-
-  let ambient_strength: GLfloat = 0.5;
-
-  let vert = graphics::compile_shader(include_str!("shaders/fixed.vert"), gl::VERTEX_SHADER);
-  let frag = graphics::compile_shader(include_str!("shaders/fixed.frag"), gl::FRAGMENT_SHADER);
-  let program = graphics::link_program(vert, frag);
-
-  unsafe {
-    gl::UseProgram(program);
-
-    let proj_uniform = gl::GetUniformLocation(program, CString::new("proj").unwrap().as_ptr());
-    gl::UniformMatrix4fv(proj_uniform, 1, gl::FALSE, mem::transmute(proj.as_fixed()));
-
-    let ambient_strength_uniform = gl::GetUniformLocation(program, CString::new("ambient_strength").unwrap().as_ptr());
-    gl::Uniform1f(ambient_strength_uniform, ambient_strength);
-
-    gl::UseProgram(0);
-  }
+  let program = glium::Program::from_source(&window, include_str!("shaders/fixed.vert"), include_str!("shaders/fixed.frag"), None).unwrap();
 
   let cubes: Vec<cube::Cube> = (0..NUM_CUBES).map(
     |i|
     cube::Cube {
       angle: i as f32 / NUM_CUBES as f32 * 2.0 * PI,
-      rotation: rand::random::<cgmath::Vector3<GLfloat>>().normalize(),
+      rotation: rand::random::<cgmath::Vector3<f32>>().normalize(),
       color: COLORS[i as usize % COLORS.len()],
       initial_rotation: rand::random(),
     }
     ).collect();
 
-  let stride = 6;
-  let verts: &[GLfloat] = &[
+  #[derive(Copy, Clone)]
+  struct Vertex {
+    position: [f32; 3],
+    normal: [f32; 3],
+  }
+
+  implement_vertex!(Vertex, position, normal);
+
+  let verts: &[Vertex] = &[
     // Front
-     1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
-     1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
-    -1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
-    -1.0,  1.0,  1.0,  0.0,  0.0,  1.0,
-     1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
-    -1.0, -1.0,  1.0,  0.0,  0.0,  1.0,
+    Vertex { position: [ 1.0,  1.0,  1.0], normal: [ 0.0,  0.0,  1.0] },
+    Vertex { position: [ 1.0, -1.0,  1.0], normal: [ 0.0,  0.0,  1.0] },
+    Vertex { position: [-1.0,  1.0,  1.0], normal: [ 0.0,  0.0,  1.0] },
+    Vertex { position: [-1.0,  1.0,  1.0], normal: [ 0.0,  0.0,  1.0] },
+    Vertex { position: [ 1.0, -1.0,  1.0], normal: [ 0.0,  0.0,  1.0] },
+    Vertex { position: [-1.0, -1.0,  1.0], normal: [ 0.0,  0.0,  1.0] },
 
     // Back
-     1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
-    -1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
-     1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
-     1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
-    -1.0,  1.0, -1.0,  0.0,  0.0, -1.0,
-    -1.0, -1.0, -1.0,  0.0,  0.0, -1.0,
+    Vertex { position: [ 1.0,  1.0, -1.0], normal: [ 0.0,  0.0, -1.0] },
+    Vertex { position: [-1.0,  1.0, -1.0], normal: [ 0.0,  0.0, -1.0] },
+    Vertex { position: [ 1.0, -1.0, -1.0], normal: [ 0.0,  0.0, -1.0] },
+    Vertex { position: [ 1.0, -1.0, -1.0], normal: [ 0.0,  0.0, -1.0] },
+    Vertex { position: [-1.0,  1.0, -1.0], normal: [ 0.0,  0.0, -1.0] },
+    Vertex { position: [-1.0, -1.0, -1.0], normal: [ 0.0,  0.0, -1.0] },
 
     // Left
-    -1.0,  1.0,  1.0, -1.0,  0.0,  0.0,
-    -1.0, -1.0,  1.0, -1.0,  0.0,  0.0,
-    -1.0,  1.0, -1.0, -1.0,  0.0,  0.0,
-    -1.0,  1.0, -1.0, -1.0,  0.0,  0.0,
-    -1.0, -1.0,  1.0, -1.0,  0.0,  0.0,
-    -1.0, -1.0, -1.0, -1.0,  0.0,  0.0,
+    Vertex { position: [-1.0,  1.0,  1.0], normal: [-1.0,  0.0,  0.0] },
+    Vertex { position: [-1.0, -1.0,  1.0], normal: [-1.0,  0.0,  0.0] },
+    Vertex { position: [-1.0,  1.0, -1.0], normal: [-1.0,  0.0,  0.0] },
+    Vertex { position: [-1.0,  1.0, -1.0], normal: [-1.0,  0.0,  0.0] },
+    Vertex { position: [-1.0, -1.0,  1.0], normal: [-1.0,  0.0,  0.0] },
+    Vertex { position: [-1.0, -1.0, -1.0], normal: [-1.0,  0.0,  0.0] },
 
     // Right
-     1.0,  1.0,  1.0,  1.0,  0.0,  0.0,
-     1.0,  1.0, -1.0,  1.0,  0.0,  0.0,
-     1.0, -1.0,  1.0,  1.0,  0.0,  0.0,
-     1.0, -1.0,  1.0,  1.0,  0.0,  0.0,
-     1.0,  1.0, -1.0,  1.0,  0.0,  0.0,
-     1.0, -1.0, -1.0,  1.0,  0.0,  0.0,
+    Vertex { position: [ 1.0,  1.0,  1.0], normal: [ 1.0,  0.0,  0.0] },
+    Vertex { position: [ 1.0,  1.0, -1.0], normal: [ 1.0,  0.0,  0.0] },
+    Vertex { position: [ 1.0, -1.0,  1.0], normal: [ 1.0,  0.0,  0.0] },
+    Vertex { position: [ 1.0, -1.0,  1.0], normal: [ 1.0,  0.0,  0.0] },
+    Vertex { position: [ 1.0,  1.0, -1.0], normal: [ 1.0,  0.0,  0.0] },
+    Vertex { position: [ 1.0, -1.0, -1.0], normal: [ 1.0,  0.0,  0.0] },
 
     // Bottom
-     1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
-     1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
-    -1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
-    -1.0, -1.0,  1.0,  0.0, -1.0,  0.0,
-     1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
-    -1.0, -1.0, -1.0,  0.0, -1.0,  0.0,
+    Vertex { position: [ 1.0, -1.0,  1.0], normal: [ 0.0, -1.0,  0.0] },
+    Vertex { position: [ 1.0, -1.0, -1.0], normal: [ 0.0, -1.0,  0.0] },
+    Vertex { position: [-1.0, -1.0,  1.0], normal: [ 0.0, -1.0,  0.0] },
+    Vertex { position: [-1.0, -1.0,  1.0], normal: [ 0.0, -1.0,  0.0] },
+    Vertex { position: [ 1.0, -1.0, -1.0], normal: [ 0.0, -1.0,  0.0] },
+    Vertex { position: [-1.0, -1.0, -1.0], normal: [ 0.0, -1.0,  0.0] },
 
     // Top
-     1.0,  1.0,  1.0,  0.0,  1.0,  0.0,
-    -1.0,  1.0,  1.0,  0.0,  1.0,  0.0,
-     1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
-     1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
-    -1.0,  1.0,  1.0,  0.0,  1.0,  0.0,
-    -1.0,  1.0, -1.0,  0.0,  1.0,  0.0,
+    Vertex { position: [ 1.0,  1.0,  1.0], normal: [ 0.0,  1.0,  0.0] },
+    Vertex { position: [-1.0,  1.0,  1.0], normal: [ 0.0,  1.0,  0.0] },
+    Vertex { position: [ 1.0,  1.0, -1.0], normal: [ 0.0,  1.0,  0.0] },
+    Vertex { position: [ 1.0,  1.0, -1.0], normal: [ 0.0,  1.0,  0.0] },
+    Vertex { position: [-1.0,  1.0,  1.0], normal: [ 0.0,  1.0,  0.0] },
+    Vertex { position: [-1.0,  1.0, -1.0], normal: [ 0.0,  1.0,  0.0] },
   ];
 
-  let mut vertex_buffer = 0;
+  let vertex_buffer = glium::VertexBuffer::new(&window, &verts).unwrap();
+  let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
-  unsafe {
-    gl::GenBuffers(1, &mut vertex_buffer);
+  let params = glium::DrawParameters {
+    depth_test: glium::DepthTest::IfLessOrEqual,
+    depth_range: (0.0, 1.0),
+    depth_write: true,
+    backface_culling: glium::BackfaceCullingMode::CullCounterClockWise,
+    .. Default::default()
+  };
 
-    gl::BindBuffer(gl::ARRAY_BUFFER, vertex_buffer);
-    gl::BufferData(gl::ARRAY_BUFFER,
-                   (verts.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
-                   mem::transmute(&verts[0]),
-                   gl::STATIC_DRAW);
-    gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-  }
-
-  let mut vao = 0;
-
-  unsafe {
-    gl::GenVertexArrays(1, &mut vao);
-
-    gl::BindVertexArray(vao);
-
-    gl::BindBuffer(gl::ARRAY_BUFFER, vertex_buffer);
-
-    let pos_attr = gl::GetAttribLocation(program,
-                                         CString::new("position").unwrap().as_ptr()) as GLuint;
-    gl::EnableVertexAttribArray(pos_attr);
-    gl::VertexAttribPointer(pos_attr, 3, gl::FLOAT, gl::FALSE, stride * mem::size_of::<GLfloat>() as GLsizei, ptr::null());
-
-    let normal_attr = gl::GetAttribLocation(program,
-                                           CString::new("normal").unwrap().as_ptr()) as GLuint;
-    gl::EnableVertexAttribArray(normal_attr);
-    gl::VertexAttribPointer(normal_attr, 3, gl::FLOAT, gl::FALSE, stride * mem::size_of::<GLfloat>() as GLsizei, mem::transmute(3 * mem::size_of::<GLfloat>()));
-
-    gl::BindVertexArray(0);
-  }
-
-  unsafe {
-    gl::Enable(gl::DEPTH_TEST);
-    gl::DepthMask(gl::TRUE);
-    gl::DepthFunc(gl::LEQUAL);
-    gl::DepthRange(0.0, 1.0);
-
-    gl::Enable(gl::CULL_FACE);
-    gl::FrontFace(gl::CW);
-  }
+  let reflected_params = glium::DrawParameters {
+    depth_test: glium::DepthTest::IfLessOrEqual,
+    depth_range: (0.0, 1.0),
+    depth_write: true,
+    backface_culling: glium::BackfaceCullingMode::CullClockWise,
+    .. Default::default()
+  };
 
   let mut drawing = true;
   let mut running = true;
@@ -199,64 +162,64 @@ fn main() {
       }
     }
 
-    let time = sdl_context.timer().unwrap().get_ticks() as f32 / 1000.0;
+    let time = sdl_context.timer().unwrap().ticks() as f32 / 1000.0;
 
-    unsafe {
-      gl::ClearColor(0.96, 0.96, 0.96, 1.0);
-      gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+    let mut target = window.draw();
+    target.clear_color_and_depth((0.96, 0.96, 0.96, 1.0), 1.0);
 
-      gl::UseProgram(program);
-      gl::BindVertexArray(vao);
+    for cube in &cubes {
 
-      let model_uniform = gl::GetUniformLocation(program, CString::new("model").unwrap().as_ptr());
-      let light_pos_uniform = gl::GetUniformLocation(program, CString::new("light_pos").unwrap().as_ptr());
-      let color_uniform = gl::GetUniformLocation(program, CString::new("color").unwrap().as_ptr());
-      let rotation_uniform = gl::GetUniformLocation(program, CString::new("rotation").unwrap().as_ptr());
-      let alpha_uniform = gl::GetUniformLocation(program, CString::new("alpha").unwrap().as_ptr());
+      let current_rotation: cgmath::Quaternion<f32> = cgmath::Quaternion::from_axis_angle(&cube.rotation, cgmath::rad(time + cube.initial_rotation)).normalize();
 
-      for cube in &cubes {
+      let (x, y) = ((time / SECONDS_PER_REVOLUTION) * PI * 2.0 + cube.angle).sin_cos();
 
-        let current_rotation: cgmath::Quaternion<GLfloat> = cgmath::Quaternion::from_axis_angle(&cube.rotation, cgmath::rad(time + cube.initial_rotation)).normalize();
-        gl::UniformMatrix4fv(rotation_uniform, 1, gl::FALSE, mem::transmute(cgmath::Matrix4::from(current_rotation).as_fixed()));
+      // Regular
 
-        let (x, y) = ((time / SECONDS_PER_REVOLUTION) * PI * 2.0 + cube.angle).sin_cos();
-        // Normal
-        gl::CullFace(gl::BACK);
+      let light_pos: cgmath::Vector3<f32> = cgmath::vec3(0.0, HEIGHT, -DEPTH);
 
-        let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, HEIGHT, -DEPTH);
-        gl::Uniform3fv(light_pos_uniform, 1, mem::transmute(light_pos.as_fixed()));
+      let trans = cgmath::vec3(x * RADIUS, HEIGHT + y * RADIUS, -DEPTH);
+      let model = cgmath::Matrix4::from_translation(&trans);
 
-        let trans = cgmath::vec3(x * RADIUS, HEIGHT + y * RADIUS, -DEPTH);
-        let model = cgmath::Matrix4::from_translation(&trans);
+      let regular_uniforms = uniform! {
+        alpha: 1.0f32,
+        color: cube.color,
+        model: model,
+        light_pos: light_pos,
+        proj: proj,
+        ambient_strength: ambient_strength,
+        rotation: cgmath::Matrix4::from(current_rotation),
+      };
 
-        gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
+      target.draw(&vertex_buffer,
+                  &indices,
+                  &program,
+                  &regular_uniforms,
+                  &params).unwrap();
 
-        gl::Uniform1f(alpha_uniform, 1.0);
-        gl::Uniform3fv(color_uniform, 1, mem::transmute(&cube.color));
+      // Reflection
+      let light_pos: cgmath::Vector3<f32> = cgmath::vec3(0.0, HEIGHT - (2.7 * RADIUS), -DEPTH);
 
-        gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
+      let trans = cgmath::vec3(x * RADIUS, HEIGHT + (-2.7 - y) * RADIUS, -DEPTH);
+      let flip = cgmath::Matrix4::from(cgmath::Matrix3::from_diagonal(&cgmath::vec3(1.0, - 1.0, 1.0)));
+      let model = cgmath::Matrix4::from_translation(&trans) * flip;
 
-        // Reflection
-        gl::CullFace(gl::FRONT);
-        let light_pos: cgmath::Vector3<GLfloat> = cgmath::vec3(0.0, HEIGHT - (2.7 * RADIUS), -DEPTH);
-        gl::Uniform3fv(light_pos_uniform, 1, mem::transmute(light_pos.as_fixed()));
+      let reflected_uniforms = uniform! {
+        alpha: 0.3f32,
+        color: cube.color,
+        model: model,
+        light_pos: light_pos,
+        proj: proj,
+        ambient_strength: ambient_strength,
+        rotation: cgmath::Matrix4::from(current_rotation),
+      };
 
-        let trans = cgmath::vec3(x * RADIUS, HEIGHT + (-2.7 - y) * RADIUS, -DEPTH);
-        let flip = cgmath::Matrix4::from(cgmath::Matrix3::from_diagonal(&cgmath::vec3(1.0, - 1.0, 1.0)));
-        let model = cgmath::Matrix4::from_translation(&trans) * flip;
-        gl::UniformMatrix4fv(model_uniform, 1, gl::FALSE, mem::transmute(model.as_fixed()));
-        gl::Uniform1f(alpha_uniform, 0.3);
-
-        gl::DrawArrays(gl::TRIANGLES, 0, verts.len() as i32 / stride);
-      }
-
-      gl::BindVertexArray(0);
-
-      gl::UseProgram(0);
-
-      if drawing {
-        window.gl_swap_window();
-      }
+      target.draw(&vertex_buffer,
+                  &indices,
+                  &program,
+                  &reflected_uniforms,
+                  &reflected_params).unwrap();
     }
+
+    target.finish().unwrap();
   }
 }
